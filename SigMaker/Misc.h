@@ -20,6 +20,8 @@ struct AutoSig_t {
 };
 typedef qvector<AutoSig_t> qSigVector;
 
+typedef qvector<qstring> qBatchVector;
+extern qBatchVector StringToLines(qstring bstring, int* vcount);
 
 typedef enum {
     SIG_IDA,
@@ -51,6 +53,8 @@ void ShowSearchDialog( const char* pszSignature, const char* pszMask );
 // generate.cpp
 void CreateSig( SigType eType );
 void GenerateSig( SigType eType );
+void GenerateBatch( ea_t offsetAddress );
+void BatchMode( );
 bool AutoGenerate( qSigVector& vecSig, ea_t dwAddress );
 bool AddOneInstructionToSig( qstring& strSig, ea_t& dwCurentAddress );
 void AddInsToSig( insn_t *cmd, qstring& strSig );

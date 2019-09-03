@@ -51,3 +51,20 @@ void Settings_t::Load( const char* pszFileName )
             msg( "couldn't open settings file using either default or current settings\n" );
     }
 }
+
+qBatchVector StringToLines(qstring bstring, int* vcount)
+{
+	qBatchVector result;
+	int markbegin = 0;
+	int markend = 0;
+
+	for (int i = 0; i < bstring.length(); ++i) {
+		if (bstring[i] == (L'\n')) {
+			markend = i;
+			result.push_back(bstring.substr(markbegin, markend - markbegin));
+			markbegin = (i + 1);
+			vcount = vcount + 1;
+		}
+	}
+	return result;
+}

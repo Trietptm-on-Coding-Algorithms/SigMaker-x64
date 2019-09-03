@@ -1,4 +1,5 @@
 #include "Misc.h"
+#include "nalt.hpp"
 
 void AddBytesToSig( qstring& strSig, ea_t dwAddress, ea_t dwSize )
 {
@@ -448,3 +449,120 @@ void GenerateSig( SigType eType )
         }
     }
 }
+
+void GenerateBatch( ea_t offsetAddress )
+{
+	qSigVector vecSig;
+	qSigVector::iterator iterSig;
+	size_t uiLength = 9999;
+	//msg("Generate received: %llX ... ", offsetAddress);
+	//ea_t dwAddress = to_ea(0x140000000, offsetAddress);
+	ea_t dwAddress = 0x140000000 + offsetAddress;
+	msg("%llx\n  <Sig>\n", dwAddress);
+
+	if (dwAddress == BADADDR)
+	{
+		if (Settings.iLogLevel >= 2)
+		{
+			msg("\nBad Address:\n0x%X\n\n", offsetAddress);
+		}
+		return;
+	}
+
+	if (AutoGenerate(dwAddress, vecSig))
+	{
+		for (AutoSig_t& i : vecSig)
+		{
+			if (Settings.iSelectionType == 0)
+			{
+				size_t nLength = i.strSig.length();
+				if (uiLength > nLength || (i.eType == PT_DIRECT && uiLength == nLength))
+				{
+					uiLength = nLength;
+					iterSig = &i;
+				}
+			}
+			else
+			{
+				if (Settings.iSelectionType == 1)
+				{
+					if (uiLength > i.iOpCount || (i.eType == PT_DIRECT && uiLength == i.iOpCount))
+					{
+						uiLength = i.iOpCount;
+						iterSig = &i;
+					}
+				}
+				else
+				{
+					unsigned int nLength = GetCharCount(i.strSig.c_str(), '?');
+
+					if (uiLength > nLength || (i.eType == PT_DIRECT && uiLength == nLength))
+					{
+						uiLength = nLength;
+						iterSig = &i;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		msg("Failed to generate signature at: 0x%X\n\n", dwAddress);
+		return;
+	}
+
+	qstring strSig = iterSig->strSig, strTmp;
+	qstring codeSig = iterSig->strSig, codeTmp;
+	char szMask[MAXSTR];
+
+	IDAToCode(codeSig, codeTmp, szMask);
+	codeSig.sprnt("%s, %s", codeTmp.c_str(), szMask);
+
+	TextToClipboard(strSig.c_str());
+
+	//msg("\n\n%llX\n Sig", offsetAddress);
+		switch (iterSig->eType)
+		{
+		case PT_DIRECT:
+			msg("    <name>0x%X</name>\n    <data>%s Sig</data>\n    <mask>%s</mask>\n    <func>False</func>\n  </Sig>\n\n", dwAddress - iterSig->dwStartAddress, codeTmp.c_str(), szMask);
+			//msg("CODEsig: \n%s\n", codeSig.c_str()); 
+			//msg("IDA Sig: \n%s\n\n", strSig.c_str());
+			msg("0x%X,%s,False,,%s\n\n", dwAddress - iterSig->dwStartAddress, codeSig.c_str(), strSig.c_str());
+			break;
+		case PT_FUNCTION:
+			msg("    <name>0x%X</name>\n    <data>%s Fnc (+0x%X)</data>\n    <mask>%s</mask>\n    <func>True</func>\n  </Sig>\n\n", dwAddress - iterSig->dwStartAddress, codeTmp.c_str(), szMask);
+			//msg("containing function: (+0x%X): \n%s\n", dwAddress - iterSig->dwStartAddress, codeSig.c_str()); 
+			//msg("IDA Fnc (+0x%X): \n%s\n\n", dwAddress - iterSig->dwStartAddress, strSig.c_str());
+			msg("0x%X,%s,False,,%s\n\n", dwAddress - iterSig->dwStartAddress, codeSig.c_str(), strSig.c_str());
+			break;
+		case PT_REFERENCE:
+			msg("    <name>0x%X</name>\n    <data>%s Ref</data>\n    <mask>%s</mask>\n    <func>True</func>\n  </Sig>\n\n", dwAddress - iterSig->dwStartAddress, codeTmp.c_str(), szMask);
+			//msg("first opcode: [actual address in first opcode] \n%s\n", codeSig.c_str()); 
+			//msg("IDA Ref: \n%s\n\n", strSig.c_str());
+			msg("0x%X,%s,False,,%s\n\n", dwAddress - iterSig->dwStartAddress, codeSig.c_str(), strSig.c_str());
+			break;
+		}
+	}
+
+/*
+void GetBatch(void) {
+	qstring BatchString;
+	qstring TempString;
+	ea_t ea_ptr;
+	//	ea_t screen_ea;
+	bool Response = ask_text(&BatchString, MAXSTR, "0x7777777", "Enter Offsets");
+	if (Response) {
+		qBatchVector BatchVector = StringToLines(BatchString);
+		msg("Entered: %s", BatchString.c_str());
+		for (int i = 1; i <= BatchVector.size(); i++) {
+			TempString = BatchVector[i];
+			msg("Finding Address ... %s", TempString.c_str());
+						const char* cstr = TempString.c_str();
+						if (str2ea(&ea_ptr, cstr, 0)) {
+							msg("ea_ptr ... 0x%X", ea_ptr);
+							GenerateBatch(ea_ptr);
+						}
+		}
+	}
+	//GenerateBatch(0x141610EA0); //THIS WORKS
+}*/
